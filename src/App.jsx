@@ -1,5 +1,6 @@
 import axios from "axios"
-import React, { useEffect, useState } from "react"
+import { debounce } from "lodash"
+import React, { useEffect, useState, useCallback } from "react"
 
 function FindBook() {
   const [books, setBooks] = useState([])
@@ -11,7 +12,7 @@ function FindBook() {
         `https://www.googleapis.com/books/v1/volumes?q=${search}`
       )
       console.log(result.data)
-      setBooks(result.data.items || []) // ตั้งค่าหนังสือจาก API
+      setBooks(result.data.items || [])
     } catch (error) {
       console.error("Error fetching books:", error)
     }
@@ -21,16 +22,25 @@ function FindBook() {
     if (search.trim() !== "") {
       getBooks()
     }
-  }, [search]) // เรียก getBooks เมื่อ search เปลี่ยนแปลง
+  }, [search])
 
-  const handleSearch = (e) => {
-    setSearch(e.target.value) // อัปเดตค่าการค้นหา
+  // ใช้ useCallback เพื่อ memoize ฟังก์ชัน debounce
+  const debounceHandleSearch = useCallback(
+    debounce((value) => {
+      setSearch(value)
+    }, 1000),
+    [] // dependencies array ว่างเพราะ debounce ไม่ควรเปลี่ยน
+  )
+
+  const handleChange = (e) => {
+    // เรียกฟังก์ชัน debounce ด้วยค่า input ใหม่
+    debounceHandleSearch(e.target.value)
   }
 
   return (
     <div>
       <h1>Find Book</h1>
-      <input type='text' value={search} onChange={handleSearch} />
+      <input type='text' onChange={handleChange} />
       <div>
         {books.length > 0 ? (
           books.map((book) => (
