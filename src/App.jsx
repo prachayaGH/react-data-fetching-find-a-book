@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
+import debounce from "lodash.debounce";
 import "./App.css";
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
   const fetchBooks = async () => {
     if (query === "") {
       setError("⚠️ กรุณากรอกข้อความค้นหา");
+      setBooks([]); // เคลียร์ผลลัพธ์เมื่อไม่มีคำค้นหา
       return;
     }
 
@@ -29,6 +31,18 @@ function App() {
     setLoading(false);
   };
 
+  // การดีเบาเซิร์จ (ค้นหาในช่วงเวลาที่กำหนด)
+  const debouncedFetchBooks = debounce(fetchBooks, 500);
+
+  // ใช้ useEffect เพื่อตรวจสอบเมื่อ query เปลี่ยน
+  useEffect(() => {
+    debouncedFetchBooks();
+    // ควรเคลียร์การดีเบาเมื่อคอมโพเนนต์ถูกทำลาย
+    return () => {
+      debouncedFetchBooks.cancel();
+    };
+  }, [query]);
+
   return (
     <div className="container">
       <h1>🔍 ค้นหาหนังสือ</h1>
@@ -39,9 +53,7 @@ function App() {
           placeholder="พิมพ์ชื่อหนังสือ..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && fetchBooks()}
         />
-        <button onClick={fetchBooks}>ค้นหา</button>
       </div>
 
       {loading && <p className="loading">⌛ กำลังโหลด...</p>}
@@ -53,7 +65,6 @@ function App() {
             <h2>{book.volumeInfo.title}</h2>
             <p>{book.volumeInfo.authors?.join(", ") || "ไม่ระบุผู้แต่ง"}</p>
           </li>
-          
         ))}
       </ul>
     </div>
